@@ -4,8 +4,8 @@ from supabase import create_client
 class DBManager:
     def __init__(self):
         # Mantenemos tus credenciales actuales
-        self.url = "https://jegxtslswopyixvtuexu.supabase.co"
-        self.key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImplZ3h0c2xzd29weWl4dnR1ZXh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0OTA3MTksImV4cCI6MjA4NjA2NjcxOX0.UXQ3WhR356jObinxJFGdELjuj10BaNnPrD8BrXKdLY0"
+        self.url = "https://kkusdbapdlrplfvlkgrr.supabase.co"
+        self.key = "sb_publishable_2ZoH-gMbS_08RUql64kxzQ_MSxohvY7"
         self.supabase = create_client(self.url, self.key)
 
     def fetch(self, tabla, filters=None):
