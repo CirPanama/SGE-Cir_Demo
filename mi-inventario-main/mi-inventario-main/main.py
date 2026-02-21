@@ -1,6 +1,26 @@
 import streamlit as st
 from database import DBManager
 
+st.set_page_config(
+    page_title="SGE-CIR Panamá",
+    page_icon="🏗️",
+    layout="wide", # Esto evita que el sistema se vea "encogido"
+    initial_sidebar_state="expanded"
+)
+
+# Inyectar CSS para asegurar que los colores no cambien
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #FFFFFF;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #f0f2f6;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
 # 1. Importación de módulos existentes
 from inventario import ModuloInventario
 from cotizaciones import ModuloCotizaciones
