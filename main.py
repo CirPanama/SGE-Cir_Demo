@@ -1,14 +1,15 @@
 import streamlit as st
 from database import DBManager
 
+# 1. CONFIGURACIÓN DE PÁGINA (Debe ser SIEMPRE la primera instrucción de Streamlit)
 st.set_page_config(
     page_title="SGE-CIR Panamá",
     page_icon="🏗️",
-    layout="wide", # Esto evita que el sistema se vea "encogido"
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Inyectar CSS para asegurar que los colores no cambien
+# 2. INYECCIÓN DE CSS PARA PERSONALIZACIÓN VISUAL
 st.markdown("""
     <style>
     .stApp {
@@ -17,11 +18,14 @@ st.markdown("""
     [data-testid="stSidebar"] {
         background-color: #f0f2f6;
     }
+    /* Estilo para los títulos principales */
+    h1 {
+        color: #333333;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-
-# 1. Importación de módulos existentes
+# 3. IMPORTACIÓN DE MÓDULOS (Después de la configuración de página)
 from inventario import ModuloInventario
 from cotizaciones import ModuloCotizaciones
 from ventas import ModuloVentas
@@ -29,13 +33,10 @@ from clientes import ModuloClientes
 from contabilidad import ModuloContabilidad
 from configuracion import ModuloConfiguracion
 
-# Configuración de página - CIR PANAMÁ
-st.set_page_config(page_title="CIR PANAMÁ", layout="wide", page_icon="🤖")
-
-# Inicializar Base de Datos
+# Inicializar manejador de Base de Datos
 db = DBManager()
 
-# 2. Inicialización de Session State (Evita que el código explote)
+# 4. INICIALIZACIÓN DE SESSION STATE (Gestión de sesión)
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'user_data' not in st.session_state:
@@ -43,11 +44,12 @@ if 'user_data' not in st.session_state:
 if 'rol' not in st.session_state:
     st.session_state.rol = None
 
-# --- INTERFAZ DE LOGIN ---
+# --- LÓGICA DE INTERFAZ ---
+
 if not st.session_state.autenticado:
+    # --- PANTALLA DE LOGIN ---
     st.markdown("<h1 style='text-align: center; color: #707070; font-weight: bold;'>🤖 CIR PANAMÁ</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: #A0A0A0; font-family: sans-serif; font-weight: normal;'>Sistema de Gestión Empresarial</h3>", unsafe_allow_html=True)
-    st.markdown("<h5 style='text-align: center; color: #B0B0B0; font-family: sans-serif; font-weight: normal;'>Ingresar al Sistema</h5>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
@@ -60,25 +62,23 @@ if not st.session_state.autenticado:
             submit = st.form_submit_button("Ingresar", use_container_width=True)
             
             if submit:
-                # Consulta a la tabla perfiles
+                # Consulta a la tabla perfiles mediante el DBManager
                 res = db.fetch("perfiles")
                 user = next((u for u in res if u['usuario'] == usuario and u['clave'] == clave), None)
                 
                 if user:
                     st.session_state.autenticado = True
                     st.session_state.user_data = user
-                    # ASIGNACIÓN CLAVE: Esto es lo que piden tus módulos (clientes.py, etc.)
                     st.session_state.rol = user.get('rol', 'usuario')
                     st.rerun()
                 else:
                     st.error("Credenciales incorrectas o usuario no existe.")
 
-# --- INTERFAZ DEL SISTEMA ---
 else:
+    # --- INTERFAZ DEL SISTEMA PRINCIPAL (AUTENTICADO) ---
     with st.sidebar:
         st.markdown(f"<h2 style='color: #707070; font-weight: bold;'>🏗️ CIR PANAMÁ</h2>", unsafe_allow_html=True)
         
-        # Datos del usuario actual
         u_name = st.session_state.user_data.get('usuario', 'N/A')
         u_rol = st.session_state.rol
         
@@ -86,10 +86,10 @@ else:
         st.write(f"Permisos: `{u_rol}`")
         st.divider()
         
-        # Menú dinámico
+        # Menú dinámico según el rol
         opciones = ["📦 Inventario", "📄 Cotizaciones", "🛒 Ventas", "👥 Clientes", "💰 Contabilidad"]
         
-        # Solo master_it tiene la llave de configuración
+        # Solo el rol master_it puede ver la configuración técnica
         if u_rol == "master_it":
             opciones.append("⚙️ Configuración")
             
@@ -102,8 +102,7 @@ else:
             st.session_state.rol = None
             st.rerun()
 
-    # --- ENRUTADOR DE MÓDULOS ---
-    # Se inyecta la instancia 'db' a cada clase
+    # --- ENRUTADOR DE MÓDULOS (Renderizado de contenido) ---
     if choice == "📦 Inventario":
         ModuloInventario(db).render()
     elif choice == "📄 Cotizaciones":
