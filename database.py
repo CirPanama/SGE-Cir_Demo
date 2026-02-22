@@ -5,7 +5,7 @@ class DBManager:
     def __init__(self):
         # Mantenemos tus credenciales actuales
         self.url = "https://kkusdbapdlrplfvlkgrr.supabase.co"
-        self.key = "sb_publishable_2ZoH-gMbS_08RUql64kxzQ_MSxohvY7"
+        self.key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdXNkYmFwZGxycGxmdmxrZ3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTU4MzUsImV4cCI6MjA4NzE5MTgzNX0.aezaYsRS_g_dFBFdN1TE3ljICq0O3asrqMpMgmEXni0"
         self.supabase = create_client(self.url, self.key)
 
     def fetch(self, tabla, filters=None):
