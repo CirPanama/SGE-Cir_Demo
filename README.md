@@ -1,1 +1,1 @@
-# mi-inventario
+# Sistema Gestión Empresarial- Demo

@@ -7,7 +7,7 @@ class ModuloInventario:
         self.db = db
 
     def generar_pdf_inventario(self, datos):
-        """Genera HTML para impresión"""
+        """Genera HTML para impresión (Reporte de Inventario)"""
         fecha_actual = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M")
         filas = ""
         total_valor = 0
@@ -59,10 +59,48 @@ class ModuloInventario:
 
     def render(self):
         st.header("📦 Inventario CIR")
+        
+        # --- FORMULARIO DE REGISTRO (SIN PRECIO DE VENTA) ---
+        with st.expander("➕ Registrar Nuevo Producto", expanded=False):
+            with st.form("form_nuevo_producto", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                nombre = col1.text_input("Nombre del Producto")
+                barcode = col2.text_input("Código de Barras (Barcode)")
+                
+                c1, c2, c3 = st.columns(3)
+                costo = c1.number_input("Costo de Compra ($)", min_value=0.0, format="%.2f")
+                stock = c2.number_input("Stock Inicial", min_value=0, step=1)
+                s_min = c3.number_input("Stock Mínimo", min_value=0, step=1)
+
+                # Cálculos automáticos internos
+                p5, p7, p10 = costo * 1.05, costo * 1.07, costo * 1.10
+                
+                if costo > 0:
+                    st.info(f"💡 **Información de Margen:** Al guardar, el sistema asignará automáticamente el precio de venta basado en el margen P10: **${p10:.2f}**")
+                    st.caption(f"Referencia: P5: ${p5:.2f} | P7: ${p7:.2f}")
+
+                submit = st.form_submit_button("Guardar Producto", use_container_width=True)
+                
+                if submit:
+                    if nombre and costo > 0:
+                        nuevo_p = {
+                            "nombre": nombre,
+                            "barcode": barcode,
+                            "costo": costo,
+                            "stock": stock,
+                            "stock_minimo": s_min,
+                            "precio_venta": p10  # Se guarda automáticamente con el 10% de ganancia
+                        }
+                        self.db.insert("productos", nuevo_p)
+                        st.success(f"✅ {nombre} registrado exitosamente con margen P10.")
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ El nombre y el costo son obligatorios.")
+
+        # --- FILTROS Y LISTADO ---
         productos = self.db.fetch("productos")
         
         col_bus, col_print = st.columns([3, 1])
-        
         with col_print:
             if st.button("🖨️ Reporte", use_container_width=True, type="primary"):
                 if productos:
@@ -71,16 +109,13 @@ class ModuloInventario:
         query = col_bus.text_input("🔍 Buscar por nombre o barcode...").lower()
 
         if productos:
-            # Sección de Alertas Rápidas
             bajos = [p for p in productos if int(p.get('stock') or 0) <= int(p.get('stock_minimo') or 0)]
             if bajos:
-                st.error(f"⚠️ {len(bajos)} productos necesitan reposición.")
+                st.error(f"⚠️ {len(bajos)} productos con stock crítico.")
 
             st.divider()
 
-            # --- LISTADO DE PRODUCTOS ---
             for p in productos:
-                # Búsqueda segura y normalizada
                 nombre_p = str(p.get('nombre', '')).lower()
                 barcode_p = str(p.get('barcode', '')).lower()
                 
@@ -88,21 +123,20 @@ class ModuloInventario:
                     with st.container(border=True):
                         c1, c2, c3 = st.columns([2, 1, 1])
                         
-                        stock = int(p.get('stock') or 0)
-                        s_min = int(p.get('stock_minimo') or 0)
-                        icono = "🔴" if stock <= s_min else "🟢"
+                        stock_actual = int(p.get('stock') or 0)
+                        stock_min = int(p.get('stock_minimo') or 0)
+                        icono = "🔴" if stock_actual <= stock_min else "🟢"
                         
                         c1.write(f"{icono} **{p.get('nombre', 'S/N')}**")
-                        c1.caption(f"Barcode: {p.get('barcode', 'N/A')} | Mín: {s_min}")
+                        c1.caption(f"Barcode: {p.get('barcode', 'N/A')} | Costo: ${float(p.get('costo') or 0):.2f}")
                         
-                        c2.write(f"Stock: `{stock}`")
-                        c2.write(f"Precio: `${float(p.get('precio_venta') or 0):.2f}`")
+                        c2.write(f"Stock: `{stock_actual}`")
+                        # En el listado sí mostramos el precio de venta para que el vendedor lo sepa
+                        c2.write(f"Venta (P10): **${float(p.get('precio_venta') or 0):.2f}**")
                         
                         with c3:
-                            # Botón con key única para evitar colisiones
                             st.button("📝 Editar", key=f"btn_inv_{p.get('id')}")
 
-        # Ejecutor de impresión
         if "print_inv" in st.session_state:
             components.html(st.session_state.print_inv, height=0, width=0)
             del st.session_state.print_inv
