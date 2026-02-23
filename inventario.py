@@ -60,7 +60,7 @@ class ModuloInventario:
     def render(self):
         st.header("📦 Inventario CIR")
         
-        # --- FORMULARIO DE REGISTRO (SIN PRECIO DE VENTA) ---
+        # --- FORMULARIO DE REGISTRO ---
         with st.expander("➕ Registrar Nuevo Producto", expanded=False):
             with st.form("form_nuevo_producto", clear_on_submit=True):
                 col1, col2 = st.columns(2)
@@ -68,31 +68,30 @@ class ModuloInventario:
                 barcode = col2.text_input("Código de Barras (Barcode)")
                 
                 c1, c2, c3 = st.columns(3)
-                costo = c1.number_input("Costo de Compra ($)", min_value=0.0, format="%.2f")
+                costo_input = c1.number_input("Costo de Compra ($)", min_value=0.0, format="%.2f")
                 stock = c2.number_input("Stock Inicial", min_value=0, step=1)
                 s_min = c3.number_input("Stock Mínimo", min_value=0, step=1)
 
                 # Cálculos automáticos internos
-                p5, p7, p10 = costo * 1.05, costo * 1.07, costo * 1.10
+                p10 = costo_input * 1.10
                 
-                if costo > 0:
-                    st.info(f"💡 **Información de Margen:** Al guardar, el sistema asignará automáticamente el precio de venta basado en el margen P10: **${p10:.2f}**")
-                    st.caption(f"Referencia: P5: ${p5:.2f} | P7: ${p7:.2f}")
+                if costo_input > 0:
+                    st.info(f"💡 **Información de Margen:** Al guardar, el sistema asignará el precio P10: **${p10:.2f}**")
 
                 submit = st.form_submit_button("Guardar Producto", use_container_width=True)
                 
                 if submit:
-                    if nombre and costo > 0:
+                    if nombre and costo_input > 0:
                         nuevo_p = {
                             "nombre": nombre,
                             "barcode": barcode,
-                            "costo": costo,
+                            "precio_costo": costo_input, # <-- CORREGIDO: Debe coincidir con Supabase
                             "stock": stock,
                             "stock_minimo": s_min,
-                            "precio_venta": p10  # Se guarda automáticamente con el 10% de ganancia
+                            "precio_venta": p10
                         }
                         self.db.insert("productos", nuevo_p)
-                        st.success(f"✅ {nombre} registrado exitosamente con margen P10.")
+                        st.success(f"✅ {nombre} registrado exitosamente.")
                         st.rerun()
                     else:
                         st.warning("⚠️ El nombre y el costo son obligatorios.")
@@ -128,10 +127,11 @@ class ModuloInventario:
                         icono = "🔴" if stock_actual <= stock_min else "🟢"
                         
                         c1.write(f"{icono} **{p.get('nombre', 'S/N')}**")
-                        c1.caption(f"Barcode: {p.get('barcode', 'N/A')} | Costo: ${float(p.get('costo') or 0):.2f}")
+                        # Aquí también usamos precio_costo para la visualización
+                        costo_lista = float(p.get('precio_costo') or 0)
+                        c1.caption(f"Barcode: {p.get('barcode', 'N/A')} | Costo: ${costo_lista:.2f}")
                         
                         c2.write(f"Stock: `{stock_actual}`")
-                        # En el listado sí mostramos el precio de venta para que el vendedor lo sepa
                         c2.write(f"Venta (P10): **${float(p.get('precio_venta') or 0):.2f}**")
                         
                         with c3:
