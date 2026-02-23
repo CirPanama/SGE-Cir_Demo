@@ -65,27 +65,27 @@ class ModuloInventario:
             with st.form("form_nuevo_producto", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 nombre = col1.text_input("Nombre del Producto")
-                barcode = col2.text_input("Código de Barras (Barcode)")
+                barcode_input = col2.text_input("Número de Referencia / Barcode")
                 
                 c1, c2, c3 = st.columns(3)
                 costo_input = c1.number_input("Costo de Compra ($)", min_value=0.0, format="%.2f")
                 stock = c2.number_input("Stock Inicial", min_value=0, step=1)
                 s_min = c3.number_input("Stock Mínimo", min_value=0, step=1)
 
-                # Cálculos automáticos internos
                 p10 = costo_input * 1.10
                 
                 if costo_input > 0:
-                    st.info(f"💡 **Información de Margen:** Al guardar, el sistema asignará el precio P10: **${p10:.2f}**")
+                    st.info(f"💡 Precio Sugerido (P10): **${p10:.2f}**")
 
                 submit = st.form_submit_button("Guardar Producto", use_container_width=True)
                 
                 if submit:
                     if nombre and costo_input > 0:
+                        # DICCIONARIO PARA SUPABASE
                         nuevo_p = {
                             "nombre": nombre,
-                            "barcode": barcode,
-                            "precio_costo": costo_input, # <-- CORREGIDO: Debe coincidir con Supabase
+                            "barcode": barcode_input, # <-- ESTO ASEGURA QUE SE GUARDE LA REFERENCIA
+                            "precio_costo": costo_input,
                             "stock": stock,
                             "stock_minimo": s_min,
                             "precio_venta": p10
@@ -94,9 +94,9 @@ class ModuloInventario:
                         st.success(f"✅ {nombre} registrado exitosamente.")
                         st.rerun()
                     else:
-                        st.warning("⚠️ El nombre y el costo son obligatorios.")
+                        st.warning("⚠️ Nombre y Costo son obligatorios.")
 
-        # --- FILTROS Y LISTADO ---
+        # --- LISTADO ---
         productos = self.db.fetch("productos")
         
         col_bus, col_print = st.columns([3, 1])
@@ -105,7 +105,7 @@ class ModuloInventario:
                 if productos:
                     st.session_state.print_inv = self.generar_pdf_inventario(productos)
 
-        query = col_bus.text_input("🔍 Buscar por nombre o barcode...").lower()
+        query = col_bus.text_input("🔍 Buscar por nombre o referencia...").lower()
 
         if productos:
             bajos = [p for p in productos if int(p.get('stock') or 0) <= int(p.get('stock_minimo') or 0)]
@@ -127,12 +127,13 @@ class ModuloInventario:
                         icono = "🔴" if stock_actual <= stock_min else "🟢"
                         
                         c1.write(f"{icono} **{p.get('nombre', 'S/N')}**")
-                        # Aquí también usamos precio_costo para la visualización
+                        # Visualización de la referencia guardada
+                        ref = p.get('barcode', 'Sin Ref.')
                         costo_lista = float(p.get('precio_costo') or 0)
-                        c1.caption(f"Barcode: {p.get('barcode', 'N/A')} | Costo: ${costo_lista:.2f}")
+                        c1.caption(f"Ref: **{ref}** | Costo: ${costo_lista:.2f}")
                         
                         c2.write(f"Stock: `{stock_actual}`")
-                        c2.write(f"Venta (P10): **${float(p.get('precio_venta') or 0):.2f}**")
+                        c2.write(f"Venta: **${float(p.get('precio_venta') or 0):.2f}**")
                         
                         with c3:
                             st.button("📝 Editar", key=f"btn_inv_{p.get('id')}")
